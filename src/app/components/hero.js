@@ -17,11 +17,11 @@ export default function Hero() {
           Book
         </button>
       </header>
-      <h1 className="text-5xl font-bold mb-6 text-black">
+      <h1 className="text-4xl container-heading-5xl font-bold mb-6 text-black">
         Precision <br /> Craftsmanship <br />{" "}
         <span className="text-gray-400">Every Cut</span>
       </h1>
-      <p className="text-md mb-6 text-black">
+      <p className="text-sm container-text-lg mb-6 text-black">
         Experience the art of traditional barbering with a modern twist. Book
         your spot at Ashil's Barbershop.
       </p>

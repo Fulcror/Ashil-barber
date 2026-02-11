@@ -12,8 +12,10 @@ export default function About() {
           width={600}
           height={400}
         />
-        <h2 className="text-3xl font-bold mb-4 mt-8 text-black">About Us</h2>
-        <p className="text-md mb-10 text-black">
+        <h2 className="text-2xl container-text-3xl font-bold mb-4 mt-8 text-black">
+          About Us
+        </h2>
+        <p className="text-sm container-text-lg mb-10 text-black">
           At Ashil's Barbershop, we blend classic barbering with modern style.
           Our expert barbers provide personalized grooming services in a
           welcoming atmosphere. We are committed to delivering exceptional
