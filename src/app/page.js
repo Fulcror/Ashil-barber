@@ -20,53 +20,60 @@ export default function Home() {
         </main>
       </div>
 
-      {/* Desktop View - Phone Mockup with QR */}
-      <div className="hidden lg:flex min-h-screen items-center justify-center gap-16 bg-gray-900 px-8">
-        {/* Phone Mockup */}
-        <div
-          className="w-96 rounded-3xl bg-black p-3 shadow-2xl"
-          style={{ aspectRatio: "9/20" }}
-        >
-          {/* Phone Screen Container */}
-          <div
-            className="w-full h-full bg-black rounded-3xl overflow-hidden relative"
-            style={{ containerType: "inline-size" }}
-          >
-            {/* Notch */}
-            <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-20 border-2 border-gray-700 shadow-lg"></div>
+      {/* Desktop View - header + Phone Mockup (QR below header) */}
+      <div className="hidden lg:flex min-h-screen items-center justify-center bg-gray-900 px-8">
+        <div className="w-full max-w-6xl flex items-center justify-around gap-8">
+          {/* Left: Header + Subheader + QR */}
+          <div className="flex-1 max-w-lg text-left text-white">
+            <h1 className="text-4xl leading-tight font-extrabold mb-4">
+              Ashil Mobile Hairdresser
+            </h1>
+            <p className="text-lg text-gray-200">
+              Salon-quality haircuts and styling that come to your home. Scan
+              the QR to view services and book instantly.
+            </p>
 
-            {/* Status Bar */}
-            <StatusBar />
-
-            {/* Content */}
-            <main
-              className="w-full h-full overflow-y-auto bg-white phone-scrollbar"
-              style={{ paddingTop: "1.5rem", paddingBottom: "2rem" }}
-            >
-              <Hero />
-              <Services />
-              <About />
-              <Cta />
-              <Footer />
-            </main>
-
-            {/* Home Indicator */}
-            <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-32 h-1.5 bg-black rounded-full"></div>
+            <div className="mt-6 flex flex-col items-center">
+              <Image
+                src="/qr-test.png"
+                alt="QR Code"
+                width={180}
+                height={180}
+                className="rounded-lg shadow-lg"
+              />
+              <p className="text-gray-300 text-sm mt-3 text-center">
+                Scan to open the booking page
+              </p>
+            </div>
           </div>
-        </div>
 
-        {/* QR Code Section */}
-        <div className="flex flex-col items-center gap-4">
-          <Image
-            src="/qr-test.png"
-            alt="QR Code"
-            width={200}
-            height={200}
-            className="rounded-lg shadow-lg"
-          />
-          <p className="text-white text-xl font-semibold text-center">
-            Book the appointment on your phone
-          </p>
+          {/* Center: Phone Mockup */}
+          <div
+            className="flex-none w-96 rounded-3xl p-3 phone-deep"
+            style={{ aspectRatio: "9/20" }}
+          >
+            <div
+              className="w-full h-full bg-black rounded-3xl overflow-hidden relative phone-screen"
+              style={{ containerType: "inline-size" }}
+            >
+              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-20 border-2 border-gray-700 shadow-lg"></div>
+
+              <StatusBar />
+
+              <main
+                className="w-full h-full overflow-y-auto bg-white phone-scrollbar"
+                style={{ paddingTop: "1.5rem", paddingBottom: "2rem" }}
+              >
+                <Hero />
+                <Services />
+                <About />
+                <Cta />
+                <Footer />
+              </main>
+
+              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-32 h-1.5 bg-black rounded-full"></div>
+            </div>
+          </div>
         </div>
       </div>
     </>

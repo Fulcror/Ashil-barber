@@ -125,3 +125,25 @@ body {
 .phone-scrollbar::-webkit-scrollbar-button {
   display: none;
 }
+
+/* Phone mockup depth styles */
+.phone-deep {
+  position: relative;
+  background: linear-gradient(180deg, #070812 0%, #000000 60%);
+  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.72), 0 8px 30px rgba(2, 6, 23, 0.5);
+}
+
+.phone-deep::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  /* subtle rim highlight */
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.35));
+  mix-blend-mode: overlay;
+}
+
+.phone-screen {
+  box-shadow: inset 0 6px 18px rgba(0,0,0,0.6);
+}
