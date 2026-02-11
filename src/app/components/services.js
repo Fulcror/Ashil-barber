@@ -3,7 +3,7 @@
 export default function Services() {
   return (
     <>
-      <div className="bg-gray-50 w-full p-6 text-center">
+      <div id="services" className="bg-gray-50 w-full p-6 pb-12 text-center">
         <h2 className="text-3xl font-bold mb-4 mt-8 text-black">
           Our Services
         </h2>

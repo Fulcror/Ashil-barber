@@ -4,19 +4,18 @@ import Image from "next/image";
 
 export default function Hero() {
   return (
-    <div className="w-full p-6 mb-10">
-      <header className="w-full flex justify-end mb-8 border-b border-gray-300 pb-4">
-        <nav className="space-x-4">
-          <a href="#services" className="text-gray-600 hover:text-gray-900">
-            Services
-          </a>
-          <a href="#about" className="text-gray-600 hover:text-gray-900">
-            About
-          </a>
-          <a href="#contact" className="text-gray-600 hover:text-gray-900">
-            Contact
-          </a>
-        </nav>
+    <div className="w-full p-6 pt-3 mb-10">
+      <header className="w-full flex justify-between items-center mb-8 border-b border-gray-300">
+        <Image
+          src="/ashil-logo.png"
+          alt="Ashil's Barbershop Logo"
+          width={90}
+          height={90}
+          className="rounded-full"
+        />
+        <button className="px-4 py-2 bg-black text-white rounded-md text-sm hover:bg-gray-800 transition">
+          Book
+        </button>
       </header>
       <h1 className="text-5xl font-bold mb-6 text-black">
         Precision <br /> Craftsmanship <br />{" "}
@@ -35,12 +34,12 @@ export default function Hero() {
         </button>
       </form>
       <form className="flex space-x-4">
-        <button
-          type="submit"
-          className="py-2 mb-4 w-full bg-white text-black border border-gray-300 rounded-md hover:bg-gray-100 transition"
+        <a
+          href="#services"
+          className="py-2 mb-4 w-full bg-white text-black border border-gray-300 rounded-md hover:bg-gray-100 transition text-center block"
         >
           View Services
-        </button>
+        </a>
       </form>
       <Image
         src="/hero-picture.jpg"
