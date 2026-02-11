@@ -4,7 +4,7 @@ import Image from "next/image";
 
 export default function Hero() {
   return (
-    <>
+    <div className="w-full p-6 mb-10">
       <header className="w-full flex justify-end mb-8 border-b border-gray-300 pb-4">
         <nav className="space-x-4">
           <a href="#services" className="text-gray-600 hover:text-gray-900">
@@ -49,6 +49,6 @@ export default function Hero() {
         width={800}
         height={600}
       />
-    </>
+    </div>
   );
 }
