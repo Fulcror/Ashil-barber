@@ -107,3 +107,21 @@ body {
     }
   }
 }
+
+/* Phone Scrollbar Styling */
+.phone-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.phone-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.phone-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #000000;
+  border-radius: 2px;
+}
+
+.phone-scrollbar::-webkit-scrollbar-button {
+  display: none;
+}
