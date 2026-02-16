@@ -1,0 +1,14 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - main  # change if your main branch has a different name
+
+jobs:
+  vercel-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel Deployment
+        run: |
+          curl -X POST ${{ secrets.ASHIL_VERCEL_DEPLOY_HOOK }}
