@@ -1,10 +1,24 @@
 "use client";
 
 import Image from "next/image";
+import { useState, useRef } from "react";
+import AvailabilityModal from "./AvailabilityModal";
 
 export default function Hero() {
+  const [modalOpen, setModalOpen] = useState(false);
+  const servicesRef = useRef(null);
+
+  const handleViewServices = (e) => {
+    e.preventDefault();
+    servicesRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <div className="w-full p-6 pt-3 mb-10">
+      <AvailabilityModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+      />
       <header className="w-full flex justify-between items-center mb-8 border-b border-gray-300">
         <Image
           src="/ashil-logo.png"
@@ -27,8 +41,9 @@ export default function Hero() {
       </p>
       <form className="flex space-x-4">
         <button
-          type="submit"
-          className="py-2 mb-4 w-full bg-black text-white rounded-md hover:bg-gray transition"
+          type="button"
+          onClick={() => setModalOpen(true)}
+          className="py-2 mb-4 w-full bg-black text-white rounded-md hover:bg-gray-800 transition cursor-pointer"
         >
           Book Appointment
         </button>
@@ -36,7 +51,8 @@ export default function Hero() {
       <form className="flex space-x-4">
         <a
           href="#services"
-          className="py-2 mb-4 w-full bg-white text-black border border-gray-300 rounded-md hover:bg-gray-100 transition text-center block"
+          onClick={handleViewServices}
+          className="py-2 mb-4 w-full bg-white text-black border border-gray-300 rounded-md hover:bg-gray-100 transition text-center block cursor-pointer"
         >
           View Services
         </a>
@@ -48,6 +64,7 @@ export default function Hero() {
         width={800}
         height={600}
       />
+      <div ref={servicesRef} id="services-anchor" />
     </div>
   );
 }
