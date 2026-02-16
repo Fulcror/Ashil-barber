@@ -1,0 +1,32 @@
+// Define database connection
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Define custom output path for generated Prisma Client
+generator client {
+  provider = "prisma-client-js"
+  output   = "/app/generated/prisma-client"
+}
+
+model AvailabilityRange {
+  id          Int    @id @default(autoincrement())
+  dayOfWeek   Int    // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  startTime   String // Format: "HH:MM" (e.g., "09:00")
+  endTime     String // Format: "HH:MM" (e.g., "17:00")
+
+  @@map("availability_ranges")
+}
+
+model BookedAppointment {
+  id                 Int      @id @default(autoincrement())
+  startDatetimeUtc   DateTime
+  endDatetimeUtc     DateTime
+  phoneNumber        String
+  confirmationCode   String   @unique
+  status             String   // e.g., "pending", "confirmed", "cancelled"
+  createdAt          DateTime @default(now())
+
+  @@map("booked_appointments")
+}
