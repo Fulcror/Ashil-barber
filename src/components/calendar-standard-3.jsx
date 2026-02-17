@@ -9,13 +9,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export const title = "Calendar as Appointment Picker";
 
-const Example = ({ onClose }) => {
+const CalendarPicker = ({ onClose }) => {
   const timeZone = "Asia/Dubai";
   const [date, setDate] = useState(() => {
     return toZonedTime(new Date(), timeZone);
   });
   const [selectedTime, setSelectedTime] = useState(null);
-  const [step, setStep] = useState("date"); // 'date', 'time', 'form'
+  const [step, setStep] = useState("date"); // 'date', 'time', 'form', 'verification', 'success'
   const [availableDates, setAvailableDates] = useState([]);
   const [availability, setAvailability] = useState({});
   const [availableTimes, setAvailableTimes] = useState([]);
@@ -23,10 +23,14 @@ const Example = ({ onClose }) => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingError, setBookingError] = useState(null);
+  const [appointmentId, setAppointmentId] = useState(null);
+  const [confirmationCode, setConfirmationCode] = useState("");
+  const [verificationInput, setVerificationInput] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [bookingData, setBookingData] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
-    email: "",
     contactMethod: "whatsapp",
     notes: "",
   });
@@ -99,10 +103,6 @@ const Example = ({ onClose }) => {
       setBookingError("Please enter your phone number");
       return;
     }
-    if (!formData.email.trim()) {
-      setBookingError("Please enter your email");
-      return;
-    }
 
     setIsSubmitting(true);
     try {
@@ -116,7 +116,6 @@ const Example = ({ onClose }) => {
           time: selectedTime,
           name: formData.name,
           phone: formData.phone,
-          email: formData.email,
           contactMethod: formData.contactMethod,
           notes: formData.notes,
         }),
@@ -129,21 +128,70 @@ const Example = ({ onClose }) => {
         return;
       }
 
-      onClose();
-      setStep("date");
-      setFormData({
-        name: "",
-        phone: "",
-        email: "",
-        contactMethod: "whatsapp",
-        notes: "",
-      });
+      // Move to verification step instead of closing
+      setAppointmentId(data.appointment.id);
+      setConfirmationCode(data.appointment.confirmationCode);
+      setBookingData(data.appointment);
+      setStep("verification");
     } catch (error) {
       console.error("Booking error:", error);
       setBookingError("An error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleVerification = async (e) => {
+    e.preventDefault();
+
+    if (!verificationInput.trim()) {
+      setBookingError("Please enter the confirmation code");
+      return;
+    }
+
+    setIsVerifying(true);
+    try {
+      const response = await fetch("/api/book/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          appointmentId: appointmentId,
+          confirmationCode: verificationInput,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setBookingError(data.error || "Verification failed");
+        return;
+      }
+
+      // Move to success step
+      setStep("success");
+    } catch (error) {
+      console.error("Verification error:", error);
+      setBookingError("An error occurred. Please try again.");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleCloseAndReset = () => {
+    onClose();
+    setStep("date");
+    setFormData({
+      name: "",
+      phone: "",
+      contactMethod: "whatsapp",
+      notes: "",
+    });
+    setVerificationInput("");
+    setAppointmentId(null);
+    setConfirmationCode("");
+    setBookingData(null);
   };
 
   const isDateAvailable = (testDate) => {
@@ -160,16 +208,18 @@ const Example = ({ onClose }) => {
             {step === "date" && "Select Date"}
             {step === "time" && "Select Time"}
             {step === "form" && "Your Details"}
+            {step === "verification" && "Verify Confirmation Code"}
+            {step === "success" && "Booking Confirmed!"}
           </h2>
-          {(step === "time" || step === "form") && (
+          {(step === "time" || step === "form" || step === "verification") && (
             <p className="text-sm text-gray-500 mt-1">
               {format(date, "EEE, MMM d, yyyy")}
-              {step === "form" && ` at ${selectedTime}`}
+              {(step === "form" || step === "verification") && ` at ${selectedTime}`}
             </p>
           )}
         </div>
         <button
-          onClick={onClose}
+          onClick={step === "success" ? handleCloseAndReset : onClose}
           className="text-gray-400 hover:text-gray-600 text-3xl leading-none"
         >
           ×
@@ -294,26 +344,6 @@ const Example = ({ onClose }) => {
                 />
               </div>
 
-              {/* Email */}
-              <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-gray-900 mb-1"
-                >
-                  Email Address *
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleFormChange}
-                  placeholder="e.g., ahmed@example.com"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black text-sm"
-                  required
-                />
-              </div>
-
               {/* Contact Method */}
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">
@@ -378,7 +408,98 @@ const Example = ({ onClose }) => {
               </div>
             </form>
           )}
-            </>
+
+          {/* Verification Step */}
+          {step === "verification" && (
+            <form onSubmit={handleVerification} className="space-y-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <p className="text-sm text-blue-900 mb-4">
+                  A confirmation code has been sent to your {formData.contactMethod === "whatsapp" ? "WhatsApp" : formData.contactMethod === "sms" ? "phone number" : "email"}.
+                </p>
+                <p className="text-xs text-blue-700 font-mono bg-white px-3 py-2 rounded border border-blue-200">
+                  Code: {confirmationCode}
+                </p>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="verificationCode"
+                  className="block text-sm font-medium text-gray-900 mb-1"
+                >
+                  Enter Confirmation Code *
+                </label>
+                <input
+                  type="text"
+                  id="verificationCode"
+                  value={verificationInput}
+                  onChange={(e) => {
+                    setVerificationInput(e.target.value);
+                    setBookingError(null);
+                  }}
+                  placeholder="Enter the 6-character code"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black text-sm uppercase"
+                  maxLength="10"
+                  required
+                />
+              </div>
+            </form>
+          )}
+
+          {/* Success Step */}
+          {step === "success" && (
+            <div className="text-center space-y-6">
+              <div className="flex justify-center">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                  <svg
+                    className="w-8 h-8 text-green-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Appointment Confirmed!
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Your appointment has been successfully booked.
+                </p>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-6 text-left space-y-3">
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Date & Time</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {format(date, "EEEE, MMMM d, yyyy")} at {selectedTime}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Confirmation Code</p>
+                  <p className="text-sm font-mono font-semibold text-gray-900">
+                    {confirmationCode}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Name</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {formData.name}
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-600 px-2">
+                Save your confirmation code. You'll need it to reschedule or cancel your appointment.
+              </p>
+            </div>
+          )}
+          </>
           )}
         </div>
       </ScrollArea>
@@ -391,6 +512,11 @@ const Example = ({ onClose }) => {
           </Button>
         )}
         {step === "form" && (
+          <Button onClick={handleBackToTime} variant="outline" className="flex-1">
+            Back
+          </Button>
+        )}
+        {step === "verification" && (
           <Button onClick={handleBackToTime} variant="outline" className="flex-1">
             Back
           </Button>
@@ -419,9 +545,26 @@ const Example = ({ onClose }) => {
             {isSubmitting ? "Booking..." : "Book Appointment"}
           </Button>
         )}
+        {step === "verification" && (
+          <Button
+            onClick={handleVerification}
+            disabled={isVerifying || !verificationInput.trim()}
+            className="flex-1 bg-black hover:bg-gray-800 text-white"
+          >
+            {isVerifying ? "Verifying..." : "Confirm"}
+          </Button>
+        )}
+        {step === "success" && (
+          <Button
+            onClick={handleCloseAndReset}
+            className="flex-1 bg-black hover:bg-gray-800 text-white"
+          >
+            Done
+          </Button>
+        )}
       </div>
     </div>
   );
 };
 
-export default Example;
+export default CalendarPicker;
