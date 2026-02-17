@@ -25,7 +25,7 @@ const Example = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch("/api/fetchAval");
+        const response = await fetch("/api/calendar");
         const data = await response.json();
         setAvailableDates(data.availableDates || []);
         setAvailability(data.availability || {});
