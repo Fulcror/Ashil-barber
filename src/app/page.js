@@ -12,6 +12,7 @@ import AvailabilityModal from "@/app/components/AvailabilityModal";
 
 export default function Home() {
   const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [isManageOpen, setIsManageOpen] = useState(false);
 
   return (
     <>
@@ -19,11 +20,19 @@ export default function Home() {
         isOpen={isBookingOpen}
         onClose={() => setIsBookingOpen(false)}
       />
+      <AvailabilityModal
+        isOpen={isManageOpen}
+        onClose={() => setIsManageOpen(false)}
+        mode="manage"
+      />
 
       {/* Mobile View */}
       <div className="lg:hidden min-h-screen bg-white">
         <main className="w-full">
-          <Hero onBookingClick={() => setIsBookingOpen(true)} />
+          <Hero
+            onBookingClick={() => setIsBookingOpen(true)}
+            onManageClick={() => setIsManageOpen(true)}
+          />
           <Services />
           <About />
           <Cta onBookingClick={() => setIsBookingOpen(true)} />
@@ -75,7 +84,10 @@ export default function Home() {
                 className="w-full h-full overflow-y-auto bg-white phone-scrollbar"
                 style={{ paddingTop: "1.5rem", paddingBottom: "2rem" }}
               >
-                <Hero onBookingClick={() => setIsBookingOpen(true)} />
+                <Hero
+                  onBookingClick={() => setIsBookingOpen(true)}
+                  onManageClick={() => setIsManageOpen(true)}
+                />
                 <Services />
                 <About />
                 <Cta onBookingClick={() => setIsBookingOpen(true)} />

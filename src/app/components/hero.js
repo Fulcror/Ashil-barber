@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useRef } from "react";
 
-export default function Hero({ onBookingClick }) {
+export default function Hero({ onBookingClick, onManageClick }) {
   const servicesRef = useRef(null);
 
   const handleViewServices = (e) => {
@@ -21,12 +21,20 @@ export default function Hero({ onBookingClick }) {
           height={90}
           className="rounded-full"
         />
-        <button
-          onClick={onBookingClick}
-          className="px-4 py-2 bg-black text-white rounded-md text-sm hover:bg-gray-800 transition cursor-pointer"
-        >
-          Book
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onManageClick}
+            className="px-3 py-2 border border-gray-300 text-black rounded-md text-sm hover:bg-gray-100 transition cursor-pointer"
+          >
+            Manage
+          </button>
+          <button
+            onClick={onBookingClick}
+            className="px-4 py-2 bg-black text-white rounded-md text-sm hover:bg-gray-800 transition cursor-pointer"
+          >
+            Book
+          </button>
+        </div>
       </header>
       <h1 className="text-4xl container-heading-5xl font-bold mb-6 text-black">
         Precision <br /> Craftsmanship <br />{" "}
