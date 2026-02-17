@@ -1,6 +1,5 @@
 export default function BookingVerification({
   confirmationCode,
-  contactMethod,
   verificationInput,
   onVerificationChange,
   onSubmit,
@@ -9,13 +8,7 @@ export default function BookingVerification({
     <form onSubmit={onSubmit} className="space-y-6">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
         <p className="text-sm text-blue-900 mb-4">
-          A confirmation code has been sent to your{" "}
-          {contactMethod === "whatsapp"
-            ? "WhatsApp"
-            : contactMethod === "sms"
-            ? "phone number"
-            : "email"}
-          .
+          Save your confirmation code below. You'll need it if you want to reschedule or cancel your appointment.
         </p>
         <p className="text-xs text-blue-700 font-mono bg-white px-3 py-2 rounded border border-blue-200">
           Code: {confirmationCode}

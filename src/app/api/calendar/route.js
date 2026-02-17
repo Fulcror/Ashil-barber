@@ -1,6 +1,7 @@
 import { addDays, format, parse } from "date-fns";
 import { formatInTimeZone, toZonedTime } from "date-fns-tz";
 import { PrismaClient } from "@prisma/client";
+import { convertToUTC } from "@/lib/timeConversion";
 
 const prisma = new PrismaClient();
 
@@ -40,9 +41,6 @@ export async function GET() {
         status: {
           in: ["confirmed", "pending"], // Both confirmed and pending block slots
         },
-        startDatetimeUtc: {
-          gte: new Date(), // Only future appointments
-        },
       },
     });
 
@@ -53,25 +51,8 @@ export async function GET() {
     availableDates.forEach((dateStr) => {
       // Map all hours to objects with status
       const timeSlots = allHours.map((timeStr) => {
-        // Convert time string to UTC datetime for comparison
-        const [time, period] = timeStr.split(" ");
-        const [hours, minutes] = time.split(":");
-        let hour24 = parseInt(hours);
-
-        // Convert to 24-hour format
-        if (period === "PM" && hour24 !== 12) {
-          hour24 += 12;
-        } else if (period === "AM" && hour24 === 12) {
-          hour24 = 0;
-        }
-
-        // Create a date in UTC+4 timezone
-        const localDateTime = new Date(
-          `${dateStr}T${hour24.toString().padStart(2, "0")}:${minutes}:00`,
-        );
-        const utcDateTime = new Date(
-          localDateTime.getTime() - 4 * 60 * 60 * 1000,
-        ); // Subtract 4 hours for UTC
+        // Convert to UTC using the shared helper function
+        const utcDateTime = convertToUTC(dateStr, timeStr);
 
         // Check if this time slot is booked
         const isBooked = bookedAppointments.some((appointment) => {

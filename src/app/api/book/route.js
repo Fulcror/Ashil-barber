@@ -1,27 +1,13 @@
 import { format, parse } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { PrismaClient } from "@prisma/client";
+import { convertToUTC } from "@/lib/timeConversion";
 
 const prisma = new PrismaClient();
 
 // Helper to generate a simple confirmation code
 function generateConfirmationCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
-}
-
-// Helper to convert time string to 24-hour format
-function parseTimeString(timeStr) {
-  const [time, period] = timeStr.split(" ");
-  const [hours, minutes] = time.split(":");
-  let hour24 = parseInt(hours);
-
-  if (period === "PM" && hour24 !== 12) {
-    hour24 += 12;
-  } else if (period === "AM" && hour24 === 12) {
-    hour24 = 0;
-  }
-
-  return { hour24, minutes: parseInt(minutes) };
 }
 
 export async function POST(request) {
@@ -40,20 +26,11 @@ export async function POST(request) {
       );
     }
 
-    // Parse the time string
-    const { hour24, minutes } = parseTimeString(time);
+    // Convert date and time to UTC using shared helper
+    const utcDateTime = convertToUTC(date, time);
 
-    // Create a date in UTC+4 timezone (Asia/Dubai)
-    const timeZone = "Asia/Dubai";
-    const localDateTime = new Date(
-      `${date}T${hour24.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:00`,
-    );
-
-    // Convert to UTC (subtract 4 hours for timezone offset)
-    const utcDateTime = new Date(localDateTime.getTime() - 4 * 60 * 60 * 1000);
-
-    // Create end time (2 hours after start)
-    const utcEndDateTime = new Date(utcDateTime.getTime() + 2 * 60 * 60 * 1000);
+    // Create end time (1 hour after start)
+    const utcEndDateTime = new Date(utcDateTime.getTime() + 1 * 60 * 60 * 1000);
 
     // Check if appointment slot is already booked
     const existingAppointment = await prisma.bookedAppointment.findFirst({

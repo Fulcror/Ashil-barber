@@ -283,7 +283,6 @@ const CalendarPicker = ({ onClose }) => {
               {step === "verification" && (
                 <BookingVerification
                   confirmationCode={confirmationCode}
-                  contactMethod={formData.contactMethod}
                   verificationInput={verificationInput}
                   onVerificationChange={(e) => {
                     setVerificationInput(e.target.value);
