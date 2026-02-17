@@ -48,6 +48,7 @@ export async function GET() {
 
     // Build availability map with status for each slot
     const availability = {};
+    const datesWithAvailableSlots = [];
 
     availableDates.forEach((dateStr) => {
       // Map all hours to objects with status
@@ -85,11 +86,19 @@ export async function GET() {
       });
 
       availability[dateStr] = timeSlots;
+
+      // Only include dates that have at least one available slot
+      const hasAvailableSlot = timeSlots.some(
+        (slot) => slot.status === "available",
+      );
+      if (hasAvailableSlot) {
+        datesWithAvailableSlots.push(dateStr);
+      }
     });
 
     const responseData = {
       success: true,
-      availableDates,
+      availableDates: datesWithAvailableSlots,
       availability,
       timestamp: new Date().toISOString(),
     };
