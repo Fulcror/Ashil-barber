@@ -1,9 +1,5 @@
-import { format, parse } from "date-fns";
-import { toZonedTime } from "date-fns-tz";
-import { PrismaClient } from "@prisma/client";
 import { convertToUTC } from "@/lib/timeConversion";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 // Helper to generate a simple confirmation code
 function generateConfirmationCode() {
@@ -13,7 +9,7 @@ function generateConfirmationCode() {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { date, time, name, phone, contactMethod, notes } = body;
+    const { date, time, name, phone } = body;
 
     // Validate required fields
     if (!date || !time || !name || !phone) {
@@ -78,8 +74,6 @@ export async function POST(request) {
           time: time,
           name: name,
           phone: phone,
-          contactMethod: contactMethod,
-          notes: notes,
           confirmationCode: confirmationCode,
           status: appointment.status,
         },

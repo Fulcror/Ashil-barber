@@ -34,8 +34,6 @@ const CalendarPicker = ({ onClose }) => {
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
-    contactMethod: "whatsapp",
-    notes: "",
   });
 
   const refreshCalendarData = async () => {
@@ -145,8 +143,6 @@ const CalendarPicker = ({ onClose }) => {
           time: selectedTime,
           name: formData.name,
           phone: formData.phone,
-          contactMethod: formData.contactMethod,
-          notes: formData.notes,
         }),
       });
 
@@ -214,8 +210,6 @@ const CalendarPicker = ({ onClose }) => {
     setFormData({
       name: "",
       phone: "",
-      contactMethod: "whatsapp",
-      notes: "",
     });
     setVerificationInput("");
     setAppointmentId(null);

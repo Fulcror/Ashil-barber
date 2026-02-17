@@ -1,9 +1,7 @@
-import { addDays, format, parse } from "date-fns";
-import { formatInTimeZone, toZonedTime } from "date-fns-tz";
-import { PrismaClient } from "@prisma/client";
+import { addDays, format } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 import { convertToUTC } from "@/lib/timeConversion";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
