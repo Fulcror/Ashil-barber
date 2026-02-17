@@ -27,14 +27,14 @@ function parseTimeString(timeStr) {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { date, time, name, phone, email, contactMethod, notes } = body;
+    const { date, time, name, phone, contactMethod, notes } = body;
 
     // Validate required fields
-    if (!date || !time || !name || !phone || !email) {
+    if (!date || !time || !name || !phone) {
       return Response.json(
         {
           success: false,
-          error: "Missing required fields: date, time, name, phone, email",
+          error: "Missing required fields: date, time, name, phone",
         },
         { status: 400 },
       );
@@ -60,7 +60,7 @@ export async function POST(request) {
       where: {
         startDatetimeUtc: utcDateTime,
         status: {
-          in: ["confirmed", "pending"],
+          in: ["confirmed", "pending"], // Block both confirmed and pending appointments
         },
       },
     });
@@ -101,7 +101,6 @@ export async function POST(request) {
           time: time,
           name: name,
           phone: phone,
-          email: email,
           contactMethod: contactMethod,
           notes: notes,
           confirmationCode: confirmationCode,

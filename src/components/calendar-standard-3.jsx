@@ -511,16 +511,6 @@ const CalendarPicker = ({ onClose }) => {
             Back
           </Button>
         )}
-        {step === "form" && (
-          <Button onClick={handleBackToTime} variant="outline" className="flex-1">
-            Back
-          </Button>
-        )}
-        {step === "verification" && (
-          <Button onClick={handleBackToTime} variant="outline" className="flex-1">
-            Back
-          </Button>
-        )}
 
         {step === "date" && (
           <Button onClick={onClose} variant="outline" className="flex-1">

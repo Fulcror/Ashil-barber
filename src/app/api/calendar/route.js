@@ -38,7 +38,7 @@ export async function GET() {
     const bookedAppointments = await prisma.bookedAppointment.findMany({
       where: {
         status: {
-          in: ["confirmed", "pending"], // Consider both confirmed and pending as unavailable
+          in: ["confirmed", "pending"], // Both confirmed and pending block slots
         },
         startDatetimeUtc: {
           gte: new Date(), // Only future appointments
