@@ -6,18 +6,10 @@ export default function AvailabilityModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-8 max-w-2xl w-full">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">Book Appointment</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-2xl"
-          >
-            ×
-          </button>
-        </div>
-        <CalendarPicker />
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-end lg:items-center justify-center overflow-hidden">
+      {/* Mobile: full height modal from bottom, Desktop: centered modal */}
+      <div className="w-full h-[90vh] lg:h-auto lg:max-h-[85vh] lg:max-w-md bg-white rounded-t-2xl lg:rounded-2xl shadow-2xl flex flex-col">
+        <CalendarPicker onClose={onClose} />
       </div>
     </div>
   );

@@ -1,11 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useRef } from "react";
-import AvailabilityModal from "./AvailabilityModal";
+import { useRef } from "react";
 
-export default function Hero() {
-  const [modalOpen, setModalOpen] = useState(false);
+export default function Hero({ onBookingClick }) {
   const servicesRef = useRef(null);
 
   const handleViewServices = (e) => {
@@ -15,10 +13,6 @@ export default function Hero() {
 
   return (
     <div className="w-full p-6 pt-3 mb-10">
-      <AvailabilityModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-      />
       <header className="w-full flex justify-between items-center mb-8 border-b border-gray-300">
         <Image
           src="/ashil-logo.png"
@@ -27,7 +21,10 @@ export default function Hero() {
           height={90}
           className="rounded-full"
         />
-        <button className="px-4 py-2 bg-black text-white rounded-md text-sm hover:bg-gray-800 transition">
+        <button
+          onClick={onBookingClick}
+          className="px-4 py-2 bg-black text-white rounded-md text-sm hover:bg-gray-800 transition cursor-pointer"
+        >
           Book
         </button>
       </header>
@@ -42,7 +39,10 @@ export default function Hero() {
       <form className="flex space-x-4">
         <button
           type="button"
-          onClick={() => setModalOpen(true)}
+          onClick={(e) => {
+            e.preventDefault();
+            onBookingClick();
+          }}
           className="py-2 mb-4 w-full bg-black text-white rounded-md hover:bg-gray-800 transition cursor-pointer"
         >
           Book Appointment

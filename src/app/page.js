@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 import Hero from "@/app/components/hero";
 import Services from "@/app/components/services";
@@ -5,17 +8,25 @@ import About from "@/app/components/about";
 import Cta from "@/app/components/cta";
 import Footer from "@/app/components/footer";
 import StatusBar from "@/app/components/status-bar";
+import AvailabilityModal from "@/app/components/AvailabilityModal";
 
 export default function Home() {
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+
   return (
     <>
+      <AvailabilityModal
+        isOpen={isBookingOpen}
+        onClose={() => setIsBookingOpen(false)}
+      />
+
       {/* Mobile View */}
       <div className="lg:hidden min-h-screen bg-white">
         <main className="w-full">
-          <Hero />
+          <Hero onBookingClick={() => setIsBookingOpen(true)} />
           <Services />
           <About />
-          <Cta />
+          <Cta onBookingClick={() => setIsBookingOpen(true)} />
           <Footer />
         </main>
       </div>
@@ -64,10 +75,10 @@ export default function Home() {
                 className="w-full h-full overflow-y-auto bg-white phone-scrollbar"
                 style={{ paddingTop: "1.5rem", paddingBottom: "2rem" }}
               >
-                <Hero />
+                <Hero onBookingClick={() => setIsBookingOpen(true)} />
                 <Services />
                 <About />
-                <Cta />
+                <Cta onBookingClick={() => setIsBookingOpen(true)} />
                 <Footer />
               </main>
 

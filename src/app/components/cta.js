@@ -1,6 +1,6 @@
 "use client";
 
-export default function Cta() {
+export default function Cta({ onBookingClick }) {
   return (
     <div className="w-full py-12 px-6 space-y-6 bg-gray-50">
       {/* Primary CTA - Booking */}
@@ -11,12 +11,12 @@ export default function Cta() {
         <p className="text-sm container-text-lg mb-8 text-gray-300">
           Schedule your appointment today and experience premium grooming.
         </p>
-        <a
-          href="#book"
-          className="py-3 px-8 bg-white text-black rounded-md hover:bg-gray-100 transition inline-block font-semibold text-base container-text-lg shadow-md hover:shadow-lg"
+        <button
+          onClick={onBookingClick}
+          className="py-3 px-8 bg-white text-black rounded-md hover:bg-gray-100 transition inline-block font-semibold text-base container-text-lg shadow-md hover:shadow-lg cursor-pointer"
         >
           Book Now
-        </a>
+        </button>
       </div>
 
       {/* Secondary CTA - WhatsApp */}
