@@ -400,39 +400,335 @@ export function validateName(name) {
 
 ---
 
-## IMPORTANT IMPROVEMENTS
+## DATA INTEGRITY RISKS (Should fix)
 
-### IMP-1: Race Condition in Reschedule Endpoint
+### DATAINT-1: Race Condition in Reschedule
 
-**File:** `src/app/api/appointments/reschedule/route.js`
-
-Same double-booking issue. Update to use `try-catch` for unique constraint:
+**Same issue as double-booking but in [src/app/api/appointments/reschedule/route.js](src/app/api/appointments/reschedule/route.js):**
 
 ```javascript
-try {
-  const newAppointment = await prisma.bookedAppointment.create({
-    data: {
-      startDatetimeUtc: utcDateTime,
-      endDatetimeUtc: utcEndDateTime,
-      phoneNumber: appointment.phoneNumber,
-      confirmationCode: newConfirmationCode,
-      status: "confirmed",
-    },
-  });
-} catch (dbError) {
-  if (dbError.code === "P2002") {
-    throw new AppError(
-      "New time slot is no longer available. Please choose another.",
-      409,
-    );
-  }
-  throw dbError;
+// Lines 50: Check if new slot is available
+const existingAppointment = await prisma.bookedAppointment.findFirst({...});
+if (existingAppointment) return; // RACE WINDOW
+
+// Line 86: Create new appointment
+const newAppointment = await prisma.bookedAppointment.create({...});
+```
+
+**Fix:**  
+Same as booking — use unique database constraint + catchPrismaError.
+
+---
+
+### DATAINT-2: Missing Database Constraints on `status` Enum
+
+**Issue:**
+
+```javascript
+model BookedAppointment {
+  status String // ← Can be ANY value
 }
+```
+
+Someone could insert `UPDATE booked_appointments SET status = 'invalid'` directly. Your app expects only `"pending"`, `"confirmed"`, `"canceled"`.
+
+**Impact:**
+
+- Query filters break: `status: { in: ["confirmed", "pending"] }` won't match invalid statuses.
+- Logic errors in frontend when status is unexpected.
+
+**Fix:**  
+Add database constraint (already in CRITICAL-1 schema update):
+
+```javascript
+// In src/prisma/schema.prisma
+model BookedAppointment {
+  // ... other fields
+  status           String   @db.Enum("pending", "confirmed", "canceled")
+  // ...
+  @@index([startDatetimeUtc, status])
+}
+```
+
+Then run migration:
+
+```bash
+npx prisma migrate dev --name add_status_enum
 ```
 
 ---
 
-### IMP-2: Calendar Endpoint Inefficiency
+### DATAINT-3: Phone Numbers Stored as Plain Text
+
+**Problem:** If database is breached, all phone numbers are exposed.
+
+**Impact:**
+
+- GDPR/privacy violations.
+- Spam/harassment of customers.
+- Reputational damage.
+
+**Fix:** See IMP-4 below for phone encryption approach.
+
+---
+
+## PERFORMANCE / LOADING SPEED ISSUES
+
+### PERF-1: Calendar Endpoint Fetches ALL Bookings Into Memory
+
+**Issue:**  
+[src/app/api/calendar/route.js](src/app/api/calendar/route.js#L38-L42):
+
+Currently loads ALL historical appointments into memory, then loops through 150 slots checking each:
+
+```javascript
+const bookedAppointments = await prisma.bookedAppointment.findMany({
+  where: {
+    status: { in: ["confirmed", "pending"] },
+  },
+});
+```
+
+If you have 10,000 historical appointments: O(n) × 150 checks = 1.5M iterations per request.
+
+**Fix:**  
+Fetch only 30-day window (already in IMP-2 below).
+
+---
+
+### PERF-2: Inefficient Same-Day Collision Detection
+
+**Issue:**  
+Each booking checks for conflicts by exact time match only:
+
+```javascript
+const existingAppointment = await prisma.bookedAppointment.findFirst({
+  where: {
+    startDatetimeUtc: utcDateTime, // Exact match only
+    status: { in: ["confirmed", "pending"] },
+  },
+});
+```
+
+This works for **exact** collisions but is inefficient for **overlapping** slots. If appointments are 1 hour long, booking 2:00 PM shouldn't be allowed if 1:00 PM is already booked.
+
+**Fix:**  
+Check for time range overlap (add after PERF-1 fix):
+
+```javascript
+const existingAppointment = await prisma.bookedAppointment.findFirst({
+  where: {
+    AND: [
+      { status: { in: ["confirmed", "pending"] } },
+      { startDatetimeUtc: { lt: utcEndDateTime } }, // Existing starts before new ends
+      { endDatetimeUtc: { gt: utcDateTime } }, // Existing ends after new starts
+    ],
+  },
+});
+```
+
+---
+
+### PERF-3: Missing Database Indexes
+
+**Issue:**  
+[prisma/schema.prisma](prisma/schema.prisma): No indexes on frequently-queried columns, so calendar lookups scan entire table.
+
+**Current:**
+
+```javascript
+model BookedAppointment {
+  startDatetimeUtc DateTime
+  status           String
+  // Missing: @@index([startDatetimeUtc, status])
+}
+```
+
+**Fix:**  
+Already documented in CRITICAL-1, add composite index:
+
+```javascript
+@@index([startDatetimeUtc, status])
+```
+
+This makes 30-day calendar queries 10x faster.
+
+---
+
+## ARCHITECTURE & DESIGN PATTERNS
+
+### ARCH-1: No Error Abstraction Layer
+
+**Issue:**  
+Each route file has different error handling:
+
+```javascript
+// book/route.js
+return Response.json({ error: "...", details: error.message }, { status: 500 });
+
+// verify/route.js
+return Response.json(
+  { success: false, error: "...", details: error.message },
+  { status: 500 },
+);
+```
+
+Inconsistent responses + error details leak to frontend.
+
+**Fix:**  
+Already documented in CRITICAL-3: Create `src/lib/errorHandler.js` for unified error responses.
+
+---
+
+### ARCH-2: Missing Environment Layer Abstraction
+
+**Issue:**  
+Business logic is scattered across route files. If you want to change appointment duration or hours, you edit multiple files.
+
+**Fix:**  
+Already documented in IMP-5: Create `src/lib/config.js` with all configuration.
+
+---
+
+## MISSING PRODUCTION SAFEGUARDS
+
+### SAFEGUARD-1: No Request Size Limit
+
+**Issue:**  
+Attacker could send 100MB JSON payload causing OOM crash.
+
+**Fix:**  
+Add to `next.config.mjs`:
+
+```javascript
+export default {
+  api: {
+    bodyParser: {
+      sizeLimit: "10kb",
+    },
+  },
+};
+```
+
+---
+
+### SAFEGUARD-2: No Health Check Endpoint
+
+**Issue:**  
+Deployment monitoring can't verify database connectivity. Uptime monitors can't distinguish "is it running?" from "is it broken?"
+
+**Fix:**  
+Create `src/app/api/health/route.js`:
+
+```javascript
+import { prisma } from "@/lib/prisma";
+
+export async function GET() {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return Response.json(
+      { status: "ok", timestamp: new Date().toISOString() },
+      { status: 200 },
+    );
+  } catch (error) {
+    console.error("Health check failed:", error);
+    return Response.json(
+      { status: "error", message: "Database unavailable" },
+      { status: 503 },
+    );
+  }
+}
+```
+
+Then monitor it with:
+
+```bash
+# Every 30 seconds
+curl https://your-site.com/api/health
+```
+
+---
+
+### SAFEGUARD-3: No Audit Logging
+
+**Issue:**  
+If a booking mysteriously disappears or is modified, you can't trace who/what/when.
+
+**Fix:**  
+Create `src/lib/audit.js`:
+
+```javascript
+export async function logAudit(action, resourceId, resourceType, details = {}) {
+  try {
+    console.info(
+      `[AUDIT] ${action} | ${resourceType}:${resourceId} | timestamp: ${new Date().toISOString()} | ${JSON.stringify(details)}`,
+    );
+    // Later: upgrade to database table for long-term retention
+  } catch (error) {
+    console.error("Audit logging failed:", error);
+  }
+}
+```
+
+Then use it in every booking operation:
+
+```javascript
+import { logAudit } from "@/lib/audit";
+
+await logAudit("BOOKING_CREATED", appointment.id, "Appointment", {
+  phoneHash: phone.slice(0, 3) + "***",
+  ip: request.headers.get("x-forwarded-for"),
+});
+```
+
+---
+
+## CODE QUALITY / MAINTAINABILITY PROBLEMS
+
+### MAINT-1: No Validation Util Layer
+
+**Issue:**  
+Validation is scattered across every route. If you want to change phone validation logic, you edit multiple files.
+
+**Fix:**  
+Already documented in CRITICAL-5: Create `src/lib/validation.js` and use consistently.
+
+---
+
+### MAINT-2: Hardcoded Availability Hours & Duration
+
+**Issue:**  
+[src/app/api/calendar/route.js](src/app/api/calendar/route.js#L24-L30) and [src/app/api/book/route.js](src/app/api/book/route.js#L28) hardcode:
+
+```javascript
+const allHours = ["09:00 AM", "11:00 AM", "01:00 PM", "03:00 PM", "05:00 PM"];
+const utcEndDateTime = new Date(utcDateTime.getTime() + 1 * 60 * 60 * 1000); // 1 hour
+```
+
+If Ashil changes hours, you must edit multiple files.
+
+**Fix:**  
+Already documented in IMP-5: Create `src/lib/config.js` with all configuration.
+
+---
+
+## UNNECESSARY COMPLEXITY
+
+### COMPLEX-1: Unused Phone Formatting Utility
+
+**Issue:**  
+[lib/formatPhone.js](lib/formatPhone.js) exports `formatPhoneForWhatsApp()` but is never called in the booking flow.
+
+**Fix:**  
+Either use it consistently (in SMS/WhatsApp notification flow if you add that later) or delete the unused file and dependency.
+
+For now: **Delete lib/formatPhone.js** unless you're planning WhatsApp notifications soon.
+
+---
+
+## IMPLEMENTATION DETAILS & OPTIMIZATION FIXES
+
+### IMP-1: Calendar Endpoint Inefficiency (Performance Optimization)
 
 **File:** `src/app/api/calendar/route.js`
 
@@ -463,11 +759,11 @@ const bookedAppointments = await prisma.bookedAppointment.findMany({
 
 ---
 
-### IMP-3: No Caching on Calendar Endpoint
+### IMP-2: Calendar HTTP Caching
 
 **File:** `src/app/api/calendar/route.js`
 
-Add HTTP caching header so browsers cache for 2 minutes:
+Add HTTP caching header so browsers cache results for 2 minutes (reduces load):
 
 ```javascript
 return Response.json(responseData, {
@@ -480,13 +776,39 @@ return Response.json(responseData, {
 
 ---
 
-### IMP-4: Phone Numbers Stored as Plain Text
+### IMP-3: Phone Number Encryption (DATAINT-3 Fix)
 
-**Problem:** If database is breached, all phone numbers are exposed.
+**Problem:** Phone numbers in database are readable plaintext.
 
-**Solution:** Encrypt before storing.
+**Solution:** Encrypt at rest using `src/lib/security.js`
 
-See `src/lib/security.js` for `encryptPhone()` and `decryptPhone()` functions.
+Add encryption functions:
+
+```javascript
+import crypto from "crypto";
+
+export function encryptPhone(phone) {
+  const key = Buffer.from(process.env.PHONE_ENCRYPTION_KEY, "hex");
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
+  let encrypted = cipher.update(phone, "utf-8", "hex");
+  encrypted += cipher.final("hex");
+  return iv.toString("hex") + ":" + encrypted;
+}
+
+export function decryptPhone(encryptedPhone) {
+  const key = Buffer.from(process.env.PHONE_ENCRYPTION_KEY, "hex");
+  const [iv, encrypted] = encryptedPhone.split(":");
+  const decipher = crypto.createDecipheriv(
+    "aes-256-cbc",
+    key,
+    Buffer.from(iv, "hex"),
+  );
+  let decrypted = decipher.update(encrypted, "hex", "utf-8");
+  decrypted += decipher.final("utf-8");
+  return decrypted;
+}
+```
 
 Then update booking to encrypt:
 
@@ -495,30 +817,19 @@ import { encryptPhone } from "@/lib/security";
 
 const appointment = await prisma.bookedAppointment.create({
   data: {
-    // ... other fields
     phoneNumber: encryptPhone(phone.trim()),
-    // ...
+    // ... other fields
   },
 });
 ```
 
-And decrypt when reading:
-
-```javascript
-import { decryptPhone } from "@/lib/security";
-
-const decryptedPhone = decryptPhone(appointment.phoneNumber);
-```
-
 ---
 
-### IMP-5: Hardcoded Configuration
+### IMP-4: Config Centralization (MAINT-2 Fix)
 
-**Files:** `src/app/api/calendar/route.js`, `src/app/api/book/route.js`
+**Files affected:** `src/app/api/calendar/route.js`, `src/app/api/book/route.js`
 
-**Problem:** Business hours, duration, timezone hardcoded in multiple files.
-
-**Solution:** Create `src/lib/config.js`
+Move hardcoded hours/duration to `src/lib/config.js`:
 
 ```javascript
 export const BOOKING_CONFIG = {
@@ -526,118 +837,68 @@ export const BOOKING_CONFIG = {
     timeSlots: ["09:00 AM", "11:00 AM", "01:00 PM", "03:00 PM", "05:00 PM"],
   },
   appointmentDurationMinutes: 60,
-  workDays: [1, 2, 3, 4, 5], // Mon=1, Fri=5
+  workDays: [1, 2, 3, 4, 5], // Mon-Fri
   availabilityWindowDays: 30,
   timezone: "Asia/Dubai",
 };
 ```
 
-Then usage:
+Then import everywhere:
 
 ```javascript
 import { BOOKING_CONFIG } from "@/lib/config";
 
-const allHours = BOOKING_CONFIG.businessHours.timeSlots;
-const duration = BOOKING_CONFIG.appointmentDurationMinutes * 60 * 1000;
+const timeSlots = BOOKING_CONFIG.businessHours.timeSlots;
 ```
+
+This makes future changes (new hours, longer appointment duration) require only 1 file edit instead of 5.
 
 ---
 
-### IMP-6: No Audit Logging
+## ADDITIONAL ENHANCEMENTS (Phase 2 / Nice-to-Have)
 
-**Problem:** If a booking disappears, you can't trace who or when.
+These are improvements that are good-to-have but not blocking launch:
 
-**Solution:** Create `src/lib/audit.js`
+### NICE-1: Error Tracking & Monitoring
+
+**Tools:** Sentry, LogRocket, or similar
+
+Tracks errors in production so you can fix issues you don't know about.
+
+```bash
+npm install @sentry/nextjs
+```
+
+### NICE-2: SMS/Email Confirmations
+
+Send booking confirmation codes to customer via SMS or email instead of only showing on screen.
 
 ```javascript
-export async function logAudit(action, resourceId, resourceType, details = {}) {
-  try {
-    // Log to console for now (upgrade to database table later)
-    console.info(
-      `[AUDIT] ${action} | ${resourceType}:${resourceId} | timestamp: ${new Date().toISOString()} | ${JSON.stringify(details)}`,
-    );
-  } catch (error) {
-    console.error("Audit logging failed:", error);
-  }
+// src/lib/notifications.js
+export async function sendBookingConfirmation(phone, code, dateTime) {
+  // Integrate Twilio, SendGrid, AWS SES, etc.
+  // Example with Twilio:
+  // await client.messages.create({ body: `Code: ${code}` })
 }
 ```
 
-Then use it:
+### NICE-3: Database Query Monitoring
+
+Track slow queries with query performance insights:
 
 ```javascript
-import { logAudit } from "@/lib/audit";
-
-await logAudit("BOOKING_CREATED", appointment.id, "Appointment", {
-  phoneHash: phone.slice(0, 3) + "***", // Mask PII
-  ip: request.headers.get("x-forwarded-for"),
+// In Prisma middleware
+prisma.$use(async (params, next) => {
+  const before = Date.now();
+  const result = await next(params);
+  const after = Date.now();
+  if (after - before > 1000) {
+    console.warn(
+      `Slow query: ${params.model}.${params.action} took ${after - before}ms`,
+    );
+  }
+  return result;
 });
-```
-
----
-
-### IMP-7: Timezone Assumptions
-
-**Problem:** Hardcoded to Dubai timezone. If user is traveling, they see wrong times.
-
-**Solution:** Accept timezone in request or detect from browser.
-
-```javascript
-// In src/app/api/book/route.js
-const { date, time, name, phone, timezone = "Asia/Dubai" } = body;
-
-// Validate timezone is real
-if (!Intl.DateTimeFormat.supportedLocalesOf(timezone).length) {
-  throw new AppError("Invalid timezone", 400);
-}
-
-const utcDateTime = convertToUTC(date, time, timezone);
-```
-
----
-
-## NICE-TO-HAVE
-
-### NICE-1: Centralized Error Handling
-
-Already in critical fixes above. See `src/lib/errorHandler.js`.
-
-### NICE-2: Health Check Endpoint
-
-Create `src/app/api/health/route.js`:
-
-```javascript
-import { prisma } from "@/lib/prisma";
-
-export async function GET() {
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    return Response.json(
-      { status: "ok", timestamp: new Date().toISOString() },
-      { status: 200 },
-    );
-  } catch (error) {
-    console.error("Health check failed:", error);
-    return Response.json(
-      { status: "error", message: "Database unavailable" },
-      { status: 503 },
-    );
-  }
-}
-```
-
-### NICE-3: Request Size Limiting
-
-Add to Next.js config:
-
-```javascript
-// next.config.mjs
-export default {
-  api: {
-    bodyParser: {
-      sizeLimit: "10kb", // Limit requests to 10KB
-    },
-  },
-};
 ```
 
 ---
