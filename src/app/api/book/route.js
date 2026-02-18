@@ -28,58 +28,54 @@ export async function POST(request) {
     // Create end time (1 hour after start)
     const utcEndDateTime = new Date(utcDateTime.getTime() + 1 * 60 * 60 * 1000);
 
-    // Check if appointment slot is already booked
-    const existingAppointment = await prisma.bookedAppointment.findFirst({
-      where: {
-        startDatetimeUtc: utcDateTime,
-        status: {
-          in: ["confirmed", "pending"], // Block both confirmed and pending appointments
-        },
-      },
-    });
-
-    if (existingAppointment) {
-      return Response.json(
-        {
-          success: false,
-          error:
-            "This time slot is no longer available. Please select another time.",
-        },
-        { status: 409 },
-      );
-    }
-
     // Generate confirmation code
     const confirmationCode = generateConfirmationCode();
 
-    // Create the appointment in the database
-    const appointment = await prisma.bookedAppointment.create({
-      data: {
-        startDatetimeUtc: utcDateTime,
-        endDatetimeUtc: utcEndDateTime,
-        phoneNumber: phone,
-        confirmationCode: confirmationCode,
-        status: "pending",
-      },
-    });
-
-    // Return success response
-    return Response.json(
-      {
-        success: true,
-        message: "Appointment booked successfully!",
-        appointment: {
-          id: appointment.id,
-          date: date,
-          time: time,
-          name: name,
-          phone: phone,
+    // Try to create the appointment
+    // If the time slot is already booked, the database will reject with P2002 error
+    try {
+      const appointment = await prisma.bookedAppointment.create({
+        data: {
+          startDatetimeUtc: utcDateTime,
+          endDatetimeUtc: utcEndDateTime,
+          phoneNumber: phone,
           confirmationCode: confirmationCode,
-          status: appointment.status,
+          status: "pending",
         },
-      },
-      { status: 201 },
-    );
+      });
+
+      // Return success response
+      return Response.json(
+        {
+          success: true,
+          message: "Appointment booked successfully!",
+          appointment: {
+            id: appointment.id,
+            date: date,
+            time: time,
+            name: name,
+            phone: phone,
+            confirmationCode: confirmationCode,
+            status: appointment.status,
+          },
+        },
+        { status: 201 },
+      );
+    } catch (dbError) {
+      // P2002 = Unique constraint violation (time slot already booked)
+      if (dbError.code === "P2002") {
+        return Response.json(
+          {
+            success: false,
+            error:
+              "This time slot is no longer available. Please select another time.",
+          },
+          { status: 409 },
+        );
+      }
+      // Re-throw other database errors to be handled by outer catch
+      throw dbError;
+    }
   } catch (error) {
     console.error("Booking error:", error);
     return Response.json(

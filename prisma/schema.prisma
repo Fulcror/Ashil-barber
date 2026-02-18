@@ -22,8 +22,13 @@ model BookedAppointment {
   endDatetimeUtc   DateTime
   phoneNumber      String
   confirmationCode String   @unique
-  status           String
+  status           String   @default("pending")
   createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
+  // Unique constraint: no two pending/confirmed appointments at same time
+  @@unique([startDatetimeUtc, status], name: "uq_time_status")
+  // Index for fast calendar queries
+  @@index([startDatetimeUtc, status])
   @@map("booked_appointments")
 }

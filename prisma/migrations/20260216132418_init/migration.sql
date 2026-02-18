@@ -17,6 +17,7 @@ CREATE TABLE "booked_appointments" (
     "confirmationCode" TEXT NOT NULL,
     "status" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "booked_appointments_pkey" PRIMARY KEY ("id")
 );
