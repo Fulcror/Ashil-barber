@@ -1,22 +1,17 @@
 import { prisma } from "@/lib/prisma";
+import { handleRouteError } from "@/lib/errorHandler";
+import { validateConfirmationCode } from "@/lib/validation";
 
 export async function POST(request) {
   try {
     const body = await request.json();
     const { confirmationCode } = body;
 
-    if (!confirmationCode) {
-      return Response.json(
-        {
-          success: false,
-          error: "Missing required field: confirmationCode",
-        },
-        { status: 400 },
-      );
-    }
+    // Validate confirmation code
+    const validatedCode = validateConfirmationCode(confirmationCode);
 
     const appointment = await prisma.bookedAppointment.findUnique({
-      where: { confirmationCode: confirmationCode.toUpperCase() },
+      where: { confirmationCode: validatedCode.toUpperCase() },
     });
 
     if (!appointment) {
@@ -54,14 +49,6 @@ export async function POST(request) {
       { status: 200 },
     );
   } catch (error) {
-    console.error("Cancel error:", error);
-    return Response.json(
-      {
-        success: false,
-        error: "Failed to cancel appointment. Please try again.",
-        details: error.message,
-      },
-      { status: 500 },
-    );
+    return handleRouteError(error, "CANCEL");
   }
 }

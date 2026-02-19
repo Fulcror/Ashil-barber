@@ -2,6 +2,7 @@ import { addDays, format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { convertToUTC } from "@/lib/timeConversion";
 import { prisma } from "@/lib/prisma";
+import { handleRouteError } from "@/lib/errorHandler";
 
 export async function GET() {
   try {
@@ -84,15 +85,6 @@ export async function GET() {
 
     return Response.json(responseData);
   } catch (error) {
-    console.error("API Error:", error);
-    return Response.json(
-      {
-        success: false,
-        error: error.message,
-        availableDates: [],
-        availability: {},
-      },
-      { status: 500 },
-    );
+    return handleRouteError(error, "CALENDAR");
   }
 }

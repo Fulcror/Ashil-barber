@@ -1,27 +1,25 @@
 import { convertToUTC } from "@/lib/timeConversion";
 import { prisma } from "@/lib/prisma";
-
-function generateConfirmationCode() {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
-}
+import { generateSecureConfirmationCode } from "@/lib/security";
+import { handleRouteError } from "@/lib/errorHandler";
+import {
+  validateConfirmationCode,
+  validateDate,
+  validateTime,
+} from "@/lib/validation";
 
 export async function POST(request) {
   try {
     const body = await request.json();
     const { confirmationCode, newDate, newTime } = body;
 
-    if (!confirmationCode || !newDate || !newTime) {
-      return Response.json(
-        {
-          success: false,
-          error: "Missing required fields: confirmationCode, newDate, newTime",
-        },
-        { status: 400 },
-      );
-    }
+    // Validate all inputs
+    const validatedCode = validateConfirmationCode(confirmationCode);
+    const validatedDate = validateDate(newDate);
+    const validatedTime = validateTime(newTime);
 
     const appointment = await prisma.bookedAppointment.findUnique({
-      where: { confirmationCode: confirmationCode.toUpperCase() },
+      where: { confirmationCode: validatedCode.toUpperCase() },
     });
 
     if (!appointment) {
@@ -44,7 +42,7 @@ export async function POST(request) {
       );
     }
 
-    const utcDateTime = convertToUTC(newDate, newTime);
+    const utcDateTime = convertToUTC(validatedDate, validatedTime);
     const utcEndDateTime = new Date(utcDateTime.getTime() + 1 * 60 * 60 * 1000);
 
     const existingAppointment = await prisma.bookedAppointment.findFirst({
@@ -75,7 +73,7 @@ export async function POST(request) {
       data: { status: "canceled" },
     });
 
-    const newConfirmationCode = generateConfirmationCode();
+    const newConfirmationCode = generateSecureConfirmationCode();
 
     const newAppointment = await prisma.bookedAppointment.create({
       data: {
@@ -97,14 +95,6 @@ export async function POST(request) {
       { status: 200 },
     );
   } catch (error) {
-    console.error("Reschedule error:", error);
-    return Response.json(
-      {
-        success: false,
-        error: "Failed to reschedule appointment. Please try again.",
-        details: error.message,
-      },
-      { status: 500 },
-    );
+    return handleRouteError(error, "RESCHEDULE");
   }
 }

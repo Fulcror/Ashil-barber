@@ -1,4 +1,6 @@
 import { format } from "date-fns";
+import { useState } from "react";
+import { jsPDF } from "jspdf";
 
 export default function BookingSuccess({
   date,
@@ -6,7 +8,64 @@ export default function BookingSuccess({
   confirmationCode,
   formData,
 }) {
+  const [copied, setCopied] = useState(false);
   const barberWhatsApp = "+23055351954";
+
+  const handleCopyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(confirmationCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
+  const handleDownloadReceipt = () => {
+    const doc = new jsPDF();
+    
+    // Add title
+    doc.setFontSize(20);
+    doc.text("Appointment Confirmation", 20, 20);
+    
+    // Add barber details
+    doc.setFontSize(12);
+    doc.text("Ashil Mobile Hairdresser", 20, 35);
+    
+    // Add horizontal line
+    doc.setLineWidth(0.5);
+    doc.line(20, 42, 190, 42);
+    
+    // Add appointment details
+    doc.setFontSize(11);
+    doc.text("Appointment Details:", 20, 55);
+    
+    doc.setFontSize(10);
+    doc.text(`Name: ${formData.name}`, 20, 65);
+    doc.text(`Date: ${format(date, "EEEE, MMMM d, yyyy")}`, 20, 73);
+    doc.text(`Time: ${selectedTime}`, 20, 81);
+    
+    // Add confirmation code - highlighted
+    doc.setFontSize(11);
+    doc.text("Confirmation Code:", 20, 95);
+    doc.setFontSize(14);
+    doc.setFont(undefined, "bold");
+    doc.text(confirmationCode, 20, 105);
+    
+    // Add footer note
+    doc.setFont(undefined, "normal");
+    doc.setFontSize(9);
+    doc.text("Please save this confirmation code. You will need it to", 20, 120);
+    doc.text("reschedule or cancel your appointment.", 20, 127);
+    
+    // Add contact info
+    doc.setFontSize(8);
+    doc.text(`WhatsApp: ${barberWhatsApp}`, 20, 280);
+    doc.text(`Generated on: ${format(new Date(), "MMMM d, yyyy 'at' h:mm a")}`, 20, 285);
+    
+    // Save the PDF
+    doc.save(`appointment-${confirmationCode}.pdf`);
+  };
 
   const handleSendToWhatsApp = () => {
     const message = `Hi! I have an appointment booked.\n\nName: ${formData.name}\nDate: ${format(date, "MMMM d, yyyy")}\nTime: ${selectedTime}\nConfirmation Code: ${confirmationCode}\n\nPlease save this code.`;
@@ -58,9 +117,17 @@ export default function BookingSuccess({
           <p className="text-xs text-gray-500 uppercase tracking-wide">
             Confirmation Code
           </p>
-          <p className="text-sm font-mono font-semibold text-gray-900">
-            {confirmationCode}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-mono font-semibold text-gray-900 flex-1">
+              {confirmationCode}
+            </p>
+            <button
+              onClick={handleCopyCode}
+              className="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-medium rounded transition-colors"
+            >
+              {copied ? "Copied!" : "Copy"}
+            </button>
+          </div>
         </div>
         <div>
           <p className="text-xs text-gray-500 uppercase tracking-wide">Name</p>
@@ -75,19 +142,44 @@ export default function BookingSuccess({
         appointment.
       </p>
 
-      <button
-        onClick={handleSendToWhatsApp}
-        className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-      >
-        <svg
-          className="w-5 h-5"
-          fill="currentColor"
-          viewBox="0 0 24 24"
+      <div className="space-y-3">
+        <button
+          onClick={handleDownloadReceipt}
+          className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
         >
-          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.67-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421-7.403h-.004a9.87 9.87 0 00-4.98 1.207c-1.533.934-2.774 2.319-3.594 3.903-.897 1.706-1.265 3.592-1.032 5.45.273 2.057 1.292 3.9 2.872 5.15 1.58 1.25 3.605 1.741 5.563 1.385 2.057-.386 3.863-1.465 5.05-3.055.862-1.197 1.457-2.631 1.593-4.158.107-1.204-.046-2.384-.35-3.475.002-.062.016-.126.033-.189m-.314-11.82C8.82 0 4.467.248 1.653 2.37.536 3.304 0 5.293 0 7.357c0 2.278 1.104 4.48 3.084 6.234 1.52 1.345 3.496 2.23 5.657 2.479.428.04.858.058 1.289.058 2.065 0 4.088-.636 5.797-1.79 1.635-1.098 2.811-2.68 3.418-4.512 1.23-3.866.576-8.045-1.764-11.036C16.85 1.286 12.79 0 8.626 0z" />
-        </svg>
-        Send to WhatsApp
-      </button>
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+          Download Receipt PDF
+        </button>
+
+        <button
+          onClick={handleSendToWhatsApp}
+          className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.67-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421-7.403h-.004a9.87 9.87 0 00-4.98 1.207c-1.533.934-2.774 2.319-3.594 3.903-.897 1.706-1.265 3.592-1.032 5.45.273 2.057 1.292 3.9 2.872 5.15 1.58 1.25 3.605 1.741 5.563 1.385 2.057-.386 3.863-1.465 5.05-3.055.862-1.197 1.457-2.631 1.593-4.158.107-1.204-.046-2.384-.35-3.475.002-.062.016-.126.033-.189m-.314-11.82C8.82 0 4.467.248 1.653 2.37.536 3.304 0 5.293 0 7.357c0 2.278 1.104 4.48 3.084 6.234 1.52 1.345 3.496 2.23 5.657 2.479.428.04.858.058 1.289.058 2.065 0 4.088-.636 5.797-1.79 1.635-1.098 2.811-2.68 3.418-4.512 1.23-3.866.576-8.045-1.764-11.036C16.85 1.286 12.79 0 8.626 0z" />
+          </svg>
+          <span className="text-left">
+            <span className="block text-xs opacity-90">Share details via</span>
+            <span className="block font-bold">WhatsApp</span>
+          </span>
+        </button>
+      </div>
     </div>
   );
 }

@@ -1,16 +1,21 @@
 import { prisma } from "@/lib/prisma";
+import { handleRouteError } from "@/lib/errorHandler";
+import { validateConfirmationCode } from "@/lib/validation";
 
 export async function POST(request) {
   try {
     const body = await request.json();
     const { appointmentId, confirmationCode } = body;
 
-    // Validate required fields
-    if (!appointmentId || !confirmationCode) {
+    // Validate inputs
+    const validatedCode = validateConfirmationCode(confirmationCode);
+
+    // Validate appointmentId (basic existence check)
+    if (!appointmentId) {
       return Response.json(
         {
           success: false,
-          error: "Missing required fields: appointmentId, confirmationCode",
+          error: "Missing required field: appointmentId",
         },
         { status: 400 },
       );
@@ -32,7 +37,7 @@ export async function POST(request) {
     }
 
     // Check if code matches
-    if (appointment.confirmationCode !== confirmationCode) {
+    if (appointment.confirmationCode !== validatedCode) {
       return Response.json(
         {
           success: false,
@@ -72,14 +77,6 @@ export async function POST(request) {
       { status: 200 },
     );
   } catch (error) {
-    console.error("Verification error:", error);
-    return Response.json(
-      {
-        success: false,
-        error: "Failed to verify appointment. Please try again.",
-        details: error.message,
-      },
-      { status: 500 },
-    );
+    return handleRouteError(error, "VERIFY");
   }
 }

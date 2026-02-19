@@ -17,7 +17,7 @@ export default function AppointmentLookup({
           id="confirmationCode"
           value={lookupCode}
           onChange={onChange}
-          placeholder="Enter your 6-character code"
+          placeholder="Enter your 8-character code"
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black text-sm uppercase"
           maxLength="10"
           required
